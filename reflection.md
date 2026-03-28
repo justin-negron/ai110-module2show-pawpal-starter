@@ -30,13 +30,13 @@ When I reviewed the skeleton with AI, one thing that came up was that the Owner 
 
 **a. Constraints and priorities**
 
-- What constraints does your scheduler consider (for example: time, priority, preferences)?
-- How did you decide which constraints mattered most?
+The scheduler considers two main constraints: the owner's available time and task priority (high, medium, low). It sorts tasks by priority first, using duration as a tiebreaker, then greedily fills the available time starting with the most important tasks. I decided priority should matter most because with pet care, you really want to make sure the critical stuff (meds, walks) happens even if it means skipping the nice-to-haves.
 
 **b. Tradeoffs**
 
-- Describe one tradeoff your scheduler makes.
-- Why is that tradeoff reasonable for this scenario?
+One big tradeoff is in how conflict detection works. Our tasks have due dates but no specific start times, so the conflict checker flags any two tasks in the same category on the same day as a potential overlap. That means if you have a "Morning Walk" and an "Evening Walk," it'll warn you even though they clearly don't conflict in real life. I considered adding time-of-day scheduling, but it would add a lot of complexity for what's supposed to be a simple daily planner. The warning approach felt right — it nudges you to think about it without blocking you.
+
+Another tradeoff is the greedy scheduling algorithm. It picks the highest priority tasks first, which means it might skip a bunch of small lower-priority tasks that could technically all fit. A more optimal approach (like a knapsack algorithm) could maximize total tasks completed, but for pet care, making sure the important things get done matters more than cramming in every little task.
 
 ---
 
