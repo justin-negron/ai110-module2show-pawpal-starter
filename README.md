@@ -32,6 +32,24 @@ The scheduler includes several algorithmic features beyond basic task listing:
 - **Recurring tasks** - Daily and weekly tasks automatically generate their next occurrence when completed, using `timedelta` for accurate date math
 - **Conflict detection** - Warns about duplicate tasks, same-category overlaps on the same day, and when total task time exceeds available time. Returns warnings rather than blocking, so the owner stays informed without losing flexibility
 
+## Testing PawPal+
+
+Run the test suite with:
+
+```bash
+python -m pytest
+```
+
+The tests cover:
+
+- **Task basics** - marking tasks complete, adding tasks to pets
+- **Sorting** - verifying sort by time (shortest first) and sort by priority (high first)
+- **Recurring tasks** - daily tasks reschedule for tomorrow, weekly for next week, as-needed tasks don't recur
+- **Conflict detection** - catches duplicate task names, same-category overlaps, and time overload warnings
+- **Edge cases** - empty task lists produce empty plans, lower-priority tasks get skipped when time runs out
+
+**Confidence Level: 4/5 stars** - The core scheduling logic, recurrence, and conflict detection are well covered. The main gap is that we haven't tested the Streamlit UI integration or more complex multi-pet scenarios, but the backend logic is solid.
+
 ## Getting started
 
 ### Setup
