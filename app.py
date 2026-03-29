@@ -87,7 +87,11 @@ else:
     with col3:
         duration = st.number_input("Duration (min)", min_value=1, max_value=240, value=15)
 
-    priority = st.selectbox("Priority", ["high", "medium", "low"])
+    col_a, col_b = st.columns(2)
+    with col_a:
+        priority = st.selectbox("Priority", ["high", "medium", "low"])
+    with col_b:
+        frequency = st.selectbox("Frequency", ["daily", "weekly", "as-needed"])
 
     if st.button("Add Task"):
         if task_name.strip():
@@ -96,8 +100,8 @@ else:
                 category=category,
                 duration=int(duration),
                 priority=priority,
+                frequency=frequency,
             )
-            # Find the selected pet and add the task
             for pet in owner.pets:
                 if pet.name == selected_pet_name:
                     pet.add_task(new_task)
@@ -106,12 +110,38 @@ else:
         else:
             st.warning("Please enter a task name.")
 
-    # Show all tasks grouped by pet
+    # Show all tasks grouped by pet as tables
     for pet in owner.pets:
         if pet.tasks:
             st.markdown(f"**{pet.name}'s Tasks:**")
+            task_data = []
             for task in pet.tasks:
-                st.write(f"- {task.get_summary()}")
+                task_data.append({
+                    "Task": task.name,
+                    "Category": task.category,
+                    "Duration": f"{task.duration} min",
+                    "Priority": task.priority,
+                    "Frequency": task.frequency,
+                    "Status": "Done" if task.completed else "Pending",
+                })
+            st.table(task_data)
+
+            # Mark task complete
+            pending = pet.get_pending_tasks()
+            if pending:
+                task_to_complete = st.selectbox(
+                    f"Mark a task complete for {pet.name}",
+                    ["-- Select --"] + [t.name for t in pending],
+                    key=f"complete_{pet.name}",
+                )
+                if st.button(f"Complete Task for {pet.name}", key=f"btn_complete_{pet.name}"):
+                    if task_to_complete != "-- Select --":
+                        next_task = pet.mark_task_complete(task_to_complete)
+                        if next_task:
+                            st.success(f"'{task_to_complete}' completed! Next occurrence scheduled for {next_task.due_date}.")
+                        else:
+                            st.success(f"'{task_to_complete}' completed!")
+                        st.rerun()
 
 st.divider()
 
@@ -125,13 +155,55 @@ elif not st.session_state.owner.get_all_tasks():
 else:
     owner = st.session_state.owner
 
+    sort_option = st.radio("Sort tasks by:", ["Priority (recommended)", "Duration (shortest first)"], horizontal=True)
+
     if st.button("Generate Schedule"):
-        all_tasks = owner.get_all_pending_tasks()
+        all_tasks = owner.get_all_tasks()
         scheduler = Scheduler(tasks=all_tasks, available_minutes=owner.available_minutes)
+
+        # Show conflict warnings
+        conflicts = scheduler.detect_conflicts()
+        if conflicts:
+            for warning in conflicts:
+                st.warning(warning)
+
         plan = scheduler.generate_plan()
 
-        st.markdown("### Today's Plan")
-        st.text(plan.display())
+        # Sort scheduled tasks based on user preference
+        if sort_option == "Duration (shortest first)":
+            plan.scheduled_tasks = scheduler.sort_by_time(plan.scheduled_tasks)
 
+        # Display scheduled tasks
+        st.markdown("### Today's Plan")
+        if plan.scheduled_tasks:
+            scheduled_data = []
+            for i, task in enumerate(plan.scheduled_tasks, 1):
+                scheduled_data.append({
+                    "#": i,
+                    "Task": task.name,
+                    "Category": task.category,
+                    "Duration": f"{task.duration} min",
+                    "Priority": task.priority,
+                })
+            st.table(scheduled_data)
+            st.success(f"Total scheduled time: {plan.total_time_used} / {owner.available_minutes} minutes")
+        else:
+            st.info("No pending tasks to schedule.")
+
+        # Display skipped tasks
+        if plan.skipped_tasks:
+            st.markdown("### Skipped Tasks")
+            skipped_data = []
+            for task in plan.skipped_tasks:
+                skipped_data.append({
+                    "Task": task.name,
+                    "Category": task.category,
+                    "Duration": f"{task.duration} min",
+                    "Priority": task.priority,
+                    "Reason": "Not enough time",
+                })
+            st.table(skipped_data)
+
+        # Reasoning
         with st.expander("Why this plan?"):
             st.text(plan.get_reasoning())

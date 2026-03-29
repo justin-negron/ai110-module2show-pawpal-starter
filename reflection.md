@@ -44,13 +44,20 @@ Another tradeoff is the greedy scheduling algorithm. It picks the highest priori
 
 **a. How you used AI**
 
-- How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
-- What kinds of prompts or questions were most helpful?
+I used Claude Code (CLI) throughout the entire project instead of VS Code Copilot, but the workflow was similar. The most useful ways I used it:
+
+- **Design brainstorming** — I described the app's purpose and had AI help me identify the core classes and their relationships. It was like having a whiteboard partner who could also write Mermaid diagrams.
+- **Skeleton generation** — Once we agreed on the UML, AI translated the diagram into Python dataclass stubs really quickly. That saved a lot of boilerplate typing.
+- **Algorithmic implementation** — For things like recurring task logic with `timedelta` and the greedy scheduling algorithm, I described what I wanted and AI wrote the first draft. I'd review it and adjust.
+- **Test generation** — I outlined what behaviors to test, and AI drafted the actual test functions. This was probably where it saved me the most time.
+
+The most helpful prompts were specific ones — "implement a method that does X given Y constraints" worked way better than vague asks like "make this better." Giving context about what the method needed to handle made the output much more usable.
 
 **b. Judgment and verification**
 
-- Describe one moment where you did not accept an AI suggestion as-is.
-- How did you evaluate or verify what the AI suggested?
+One clear example: early in the design phase, AI initially set up Owner with a single Pet reference. When the Phase 2 instructions called for Owner to manage multiple pets, I had to rethink the relationship. I also pushed back on adding an `Owner.tasks` list — AI suggested it as a convenience, but I decided the tasks should live on each Pet instead, with Owner just aggregating them through its pets. That kept the data model cleaner and avoided having tasks stored in two places.
+
+I verified suggestions by running the code each time. After every implementation step, we ran `main.py` or `pytest` to confirm things actually worked, not just that they looked right. The terminal output was my source of truth, not the AI's confidence.
 
 ---
 
@@ -58,13 +65,19 @@ Another tradeoff is the greedy scheduling algorithm. It picks the highest priori
 
 **a. What you tested**
 
-- What behaviors did you test?
-- Why were these tests important?
+I tested 13 behaviors across five areas:
+
+- **Task basics** — that `mark_complete()` actually flips the status, and `add_task()` increases the task count. These are foundational — if these break, nothing else matters.
+- **Sorting** — that `sort_by_time` returns shortest first and `sort_by_priority` returns high before medium before low. The scheduler depends on correct ordering.
+- **Recurrence** — that daily tasks create a next-day copy, weekly tasks create a next-week copy, and as-needed tasks don't recur at all. Also that `Pet.mark_task_complete` properly adds the new occurrence to the pet's task list.
+- **Conflict detection** — that duplicate task names, same-category overlaps, and time overload all generate appropriate warnings.
+- **Edge cases** — an empty task list should produce an empty plan without errors, and when tasks exceed available time, lower-priority ones should get skipped while staying within the time budget.
+
+These tests were important because they cover the core contract of the app — if a user adds tasks and generates a plan, the output needs to be correct and predictable.
 
 **b. Confidence**
 
-- How confident are you that your scheduler works correctly?
-- What edge cases would you test next if you had more time?
+I'd say 4 out of 5 stars. The backend logic is well tested and I'm confident the scheduling, sorting, recurrence, and conflict detection all work correctly. What's not tested is the Streamlit UI layer — things like session state persistence, button interactions, and edge cases around the form inputs. If I had more time, I'd add tests for multi-pet scheduling scenarios (like three pets with overlapping high-priority tasks) and test what happens when someone marks the same task complete twice.
 
 ---
 
@@ -72,12 +85,12 @@ Another tradeoff is the greedy scheduling algorithm. It picks the highest priori
 
 **a. What went well**
 
-- What part of this project are you most satisfied with?
+I'm most satisfied with how the system design held up throughout the project. The five-class structure (Task, Pet, Owner, Scheduler, DailyPlan) that we sketched in Phase 1 mostly survived all the way to the final implementation. The classes grew — Task got `due_date` and recurrence, Pet gained `mark_task_complete`, Scheduler picked up sorting/filtering/conflict detection — but the core architecture didn't need to be torn apart. That felt like a win for taking the time to design before coding.
 
 **b. What you would improve**
 
-- If you had another iteration, what would you improve or redesign?
+If I had another iteration, I'd add time-of-day scheduling. Right now tasks just have a duration and due date, but no start time. That's why the conflict detection is a bit blunt — it can't tell if two walks are actually at the same time or hours apart. Adding a `start_time` field to Task and doing real overlap detection would make the scheduler much smarter. I'd also want to build a way to save and load data so your pets and tasks persist between sessions.
 
 **c. Key takeaway**
 
-- What is one important thing you learned about designing systems or working with AI on this project?
+The biggest thing I learned is that AI is an incredible coding partner, but you have to stay in the driver's seat. It's tempting to just accept whatever it generates, but the moments where I pushed back — like keeping tasks on Pet instead of Owner, or choosing a greedy algorithm over something fancier — those decisions shaped the whole project. AI can write code fast, but it doesn't know your constraints, your users, or what "simple enough" means for your specific situation. Being the lead architect means knowing when to say "no, let's keep it simpler" and when to say "actually, let's make this smarter." That judgment is the human's job.
